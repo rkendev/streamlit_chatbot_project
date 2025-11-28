@@ -60,10 +60,11 @@ def build_system_message(config: AppConfig) -> str:
         )
 
     return (
-        "You are a helpful support assistant. "
-        "Respond directly to the user's request. "
-        "It is allowed to paraphrase or summarize earlier user messages when asked. "
-        "Avoid generic welcomes. "
+        "You are the GenAI Support Bot. "
+        "You help users with questions about software development data work and AI assisted workflows. "
+        "Respond directly to the question without long greetings. "
+        "Use short clear sentences and explain your reasoning when that is useful. "
+        "You may summarise or paraphrase what the user said earlier if that helps. "
         + safety_clause
     )
 
@@ -100,6 +101,12 @@ class Chatbot:
         Build messages list with system prompt, history and new user message
         then call the model and return the assistant text.
         """
+        if self._is_forbidden(user_message):
+            return (
+                "I cannot help with that topic. "
+                "Please ask about something safe such as development data or AI workflows."
+            )
+
         messages: List[Dict[str, str]] = [
             {"role": "system", "content": self._system_message}
         ]
@@ -115,3 +122,12 @@ class Chatbot:
         )
 
         return response.choices[0].message.content.strip()
+
+    def _is_forbidden(self, text: str) -> bool:
+        """Return True when the message hits a forbidden topic."""
+        lowered = text.lower()
+        for topic in self._config.forbidden_topics:
+            if topic.lower() in lowered:
+                return True
+        return False        
+

@@ -15,3 +15,5 @@ safety:
   forbidden_topics:
     - "financial advice"
     - "medical diagnosis"
+    - "violence"
+    - "drugs"
