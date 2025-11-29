@@ -9,8 +9,12 @@ import yaml
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from datetime import datetime
+import csv
+
 
 CONFIG_PATH = Path("config/app_config.yaml")
+LOG_PATH = Path("logs/chat_log.csv")
 
 
 @dataclass
@@ -83,6 +87,28 @@ class Chatbot:
         self._config = config
         self._system_message = build_system_message(config)
 
+    def _log_turn(self, user_message: str, answer: str) -> None:
+        """Append the user message and answer to a local CSV log."""
+        try:
+            LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+            is_new_file = not LOG_PATH.exists()
+
+            with LOG_PATH.open("a", encoding="utf8", newline="") as f:
+                writer = csv.writer(f)
+                if is_new_file:
+                    writer.writerow(["timestamp", "user_message", "assistant_answer"])
+                writer.writerow(
+                    [
+                        datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                        user_message,
+                        answer,
+                    ]
+                )
+        except Exception:
+            # Logging must never break the chatbot
+            return
+
     def _windowed_history(
         self, history: List[Dict[str, str]]
     ) -> List[Dict[str, str]]:
@@ -91,7 +117,6 @@ class Chatbot:
         if window == 0:
             return []
         return history[-window:]
-
 
     def answer(
         self,
@@ -123,6 +148,7 @@ class Chatbot:
         messages.append({"role": "user", "content": user_message})
 
         # Model call
+        # Model call
         response = self._client.chat.completions.create(
             model=self._config.model_identifier,
             messages=messages,
@@ -131,8 +157,11 @@ class Chatbot:
             timeout=self._config.timeout,
         )
 
-        return response.choices[0].message.content.strip()
+        answer = response.choices[0].message.content.strip()
 
+        self._log_turn(user_message=user_message, answer=answer)
+
+        return answer
 
     def _is_forbidden(self, text: str) -> bool:
         """Return True when the message hits a forbidden topic."""
