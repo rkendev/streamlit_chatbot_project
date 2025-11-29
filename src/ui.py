@@ -55,6 +55,10 @@ def main() -> None:
     history = get_history()
     render_chat(history)
 
+    st.caption(
+        "Note: conversations are logged locally in logs/chat_log.csv for debugging and quality checks."
+    )
+
     user_input = st.chat_input("Type your question here")
 
     if user_input:
