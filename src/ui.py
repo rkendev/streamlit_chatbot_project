@@ -40,6 +40,11 @@ def main() -> None:
     st.title(config.app_title)
     st.caption(f"Version {config.app_version}")
 
+    st.info(
+        "This assistant focuses on software development, data work, and AI assisted workflows. "
+        "It cannot help with unsafe or restricted topics."
+    )
+    
     # side bar controls
     with st.sidebar:
         st.subheader("Session")
