@@ -61,9 +61,9 @@ def build_system_message(config: AppConfig) -> str:
 
     return (
         "You are the GenAI Support Bot. "
-        "You help users with questions about software development data work and AI assisted workflows. "
-        "Respond directly to the question without long greetings. "
-        "Use short clear sentences and explain your reasoning when that is useful. "
+        "You help users with software development data work and AI assisted workflows. "
+        "Respond directly to the question with one or two short sentences. "
+        "Do not start your replies with greetings like Hello Hi or Hey unless the user explicitly asks you to greet them. "
         "You may summarise or paraphrase what the user said earlier if that helps. "
         + safety_clause
     )
@@ -92,6 +92,7 @@ class Chatbot:
             return []
         return history[-window:]
 
+
     def answer(
         self,
         history: List[Dict[str, str]],
@@ -101,18 +102,27 @@ class Chatbot:
         Build messages list with system prompt, history and new user message
         then call the model and return the assistant text.
         """
+
+        # Local safety filter
         if self._is_forbidden(user_message):
             return (
                 "I cannot help with that topic. "
                 "Please ask about something safe such as development data or AI workflows."
             )
 
+        # Suppress generic greetings for one word messages
+        lowered = user_message.strip().lower()
+        if lowered in {"hi", "hello", "hey"}:
+            return "Hi. What would you like help with in your development or AI work"
+
+        # Build message list for the model
         messages: List[Dict[str, str]] = [
             {"role": "system", "content": self._system_message}
         ]
         messages.extend(self._windowed_history(history))
         messages.append({"role": "user", "content": user_message})
 
+        # Model call
         response = self._client.chat.completions.create(
             model=self._config.model_identifier,
             messages=messages,
@@ -122,6 +132,7 @@ class Chatbot:
         )
 
         return response.choices[0].message.content.strip()
+
 
     def _is_forbidden(self, text: str) -> bool:
         """Return True when the message hits a forbidden topic."""
